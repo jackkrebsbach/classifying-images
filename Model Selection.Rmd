@@ -7,7 +7,7 @@ output: html_document
 
 ## Load Libraries
 ```{r setup, include=FALSE}
-knitr::opts_knit$set(root.dir=normalizePath("..")) #set working directory to the project directory
+knitr::opts_knit$set(root.dir = normalizePath(".")) #set working directory to the project directory
 library(tidyverse)
 library(tidymodels)
 library(ranger)
@@ -22,16 +22,18 @@ library(sf)
 source('./code/helpers/classify_helpers.R')
 show_engines("rand_forest")
 rf_pixel_model <- rand_forest() %>%
-                  set_engine("ranger", importance = "impurity") %>%
-                  set_mode("classification") %>%
-                  translate()
+  set_engine("ranger", importance = "impurity") %>%
+  set_mode("classification") %>%
+  translate()
 ```
 
 ## Load training and validation set
 
-```{r}
-full_train <- readRDS('./clean_data/rdata/pixel_values/training_set.rds')
-full_val <- readRDS('./clean_data/rdata/pixel_values/validation_set.rds')
+```{r, echo = FALSE}
+full_train <-
+  readRDS('./clean_data/rdata/pixel_values/training_set.rds')
+full_val <-
+  readRDS('./clean_data/rdata/pixel_values/validation_set.rds')
 ```
 
 

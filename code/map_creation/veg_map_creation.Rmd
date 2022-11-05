@@ -4,18 +4,24 @@ author: "Jackson Krebsbach"
 date: "7/22/2019"
 output: html_document
 ---
-##Setup
+
+## Setup
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath("../..")) #set working directory to the project directory
 ```
 
 ## Libraries
+
 ```{r}
 library(raster)
 library(rgdal)
 library(stats)
 source("code/map_creation/polygon_function.R")
+
+# Load data of average value of vegetation indices and ground cover predictions
+# These data are not well documented, but can function as examples for how the
+# rest of the code functions
 load('clean_data/rdata/coverage_data/dronecov.RData')
 load('clean_data/rdata/coverage_data/drone_dat_200.RData')
 load('clean_data/rdata/coverage_data/ground_dat_200.RData')
@@ -24,7 +30,8 @@ load('clean_data/rdata/coverage_data/groundcov2.RData')
 load('clean_data/rdata/coverage_data/groundcov3.RData')
 ```
 
-## Make NDVI Raster
+## Compute NDVI Raster
+
 ```{r}
 NDVI <- function(x, ...) {
   (x[5] - x[3]) / (x[5] + x[3])
@@ -42,9 +49,9 @@ calc(
 ```
 
 ## Vegetation Density vs. Average NDVI
-```{r}
-ground_dat <- groundcov3
 
+```{r}
+ground_dat <- groundcov3 #groundcov3 comes from the loaded data at the top of the file.
 ground_dat[is.na(ground_dat)] <- 0
 drone_dat <- dronecov
 
@@ -58,28 +65,29 @@ prd <-
     to = range(ndvi)[2],
     length.out = 200
   ))
+
 err <- predict(fit, newdata = prd, se.fit = TRUE)
 
 prd$lci <- err$fit - 1.96 * err$se.fit
 prd$fit <- err$fit
 prd$uci <- err$fit + 1.96 * err$se.fit
 
-#theme_update(plot.title = element_text(hjust = 'center'))
+theme_update(plot.title = element_text(hjust = 'center'))
 ggplot(prd, aes(x = ndvi, y = fit)) + ggtitle("Live Vegetation vs. NDVI") +
   theme_bw() +
   geom_line() +
-  # geom_smooth(aes(ymin = lci, ymax = uci), stat = "identity") +
+  geom_smooth(aes(ymin = lci, ymax = uci), stat = "identity") +
   geom_point(aes(x = ndvi, y = live_veg)) + xlab('NDVI') + ylab('Live Vegetation') +
   theme(plot.title = element_text(hjust = 0.5))
 
 print(summary(fit))
-
 ```
 
-## Creating Vegetation Map
+## Vegetation density map creation
+
 ```{r}
 co <- fit$coefficients # Get the coefficients of the fit
-NDVI <- raster('./Drone_Stitched/NDVI.tif')
+NDVI <- raster('clean_data/drone_stitched/NDVI.tif')
 
 prediction <- function(x) {
   co[1] + co[2] * x + co[3] * x ^ 2
@@ -95,6 +103,7 @@ veg_map <-
                     na.rm = TRUE,
                     fun = coverage)
 
+#The only coverage predictions that make sense are between 0 and 1
 veg_map[veg_map < 0] <- 0
 veg_map[veg_map > 1] <- 1
 
@@ -102,25 +111,23 @@ raster <-
   writeRaster(veg_map, filename = "./Drone_Stitched/vegdensity3.tif", format = "GTiff")
 ```
 
-## NDVI Grey Sccale 
+## NDVI Grey Scale of single quadrat
+
 ```{r}
-NDVI <- brick('./Drone_Stitched/NDVI.tif')
-poly <- readOGR(dsn = "./Drone_Stitched", layer = "NDVI Crop")
-cropped_RGB <- raster::crop(NDVI, poly)
+NDVI <- brick('clean_data/drone_sitched/NDVI.tif')
+
+polygon_layer <-
+  readOGR(dsn = "clean_data/drone_sitched/", layer = "NDVI Crop")
+
+cropped_RGB <- raster::crop(NDVI, polygon_layer)
 coords <- readOGR(dsn = "Drone_Stitched", layer = "coord_layer")
 coord_78 <- subset(coords, id == 78)
 poly <- Polygon.Function("total", coord_78)
-
-NDVI_Func <- function(x, ...) {
-  (x[5] - x[3]) / (x[5] + x[3])
-}
 
 masked <- mask(cropped_RGB, poly)
 masked_scaled <-
   (masked - min(masked$NDVI)) / (max(masked$NDVI) - min(masked$NDVI)) * 255
 writeRaster(masked, file = "data.tiff", overwrite = TRUE)
 ```
-
-
 
 
