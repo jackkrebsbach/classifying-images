@@ -1,0 +1,338 @@
+---
+title: "Vegetation Indicies"
+author: "Jackson Krebsbach"
+date: "10/17/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(raster)
+library(ggplot2)
+library(latex2exp)
+library(ggeasy)
+```
+
+
+
+```{r include=FALSE}
+
+## Vegetation Index Functions
+Multi.Vegetation.Index<- function(subIm){(subIm[[5]]-subIm[[3]])/(subIm[[5]]+subIm[[3]])}
+Multi.Renormalized <- function(subIm){(subIm[[5]]-subIm[[3]])/(sqrt(subIm[[5]]+subIm[[3]]))}
+Multi.Simple.Index<- function(subIm){(subIm[[5]])/(subIm[[3]])}
+Multi.VARI <- function(subIm){(subIm[[2]]-subIm[[3]])/(subIm[[2]]+subIm[[3]]-subIm[[1]])}
+Multi.TGI <- function(subIm){(190*(subIM))/2}
+Multi.NLI<- function(subIm){((subIm[[5]])^2-subIm[[3]])/((subIm[[5]])^2+subIm[[3]])}
+Multi.TGI<- function(subIm){((193*(subIm[[3]]-subIm[[2]]))-(108*(subIm[[3]]-subIm[[1]])))/2}
+Multi.NDRE <- function(subIm){(subIm[[4]]-subIm[[3]])/(subIm[[4]]+subIm[[3]])}
+Multi.SAVI <- function(subIm){((subIm[[5]]-subIm[[3]])/(subIm[[5]]+subIm[[3]]+1))*2}
+
+load("./RData/ground_dat_200.RData")
+load("./RData/drone_dat_200.RData")
+```
+
+## Live_Veg vs. Ave NDVI
+
+Comparison Using the Normalized Difference Vegetation Index
+
+$$\textrm{NDVI}=\frac{\textrm{NIR}-\textrm{RED}}{\textrm{NIR}+\textrm{RED}}$$
+
+Multiple R-squared:  0.8338
+
+```{r}
+ground_dat <- ground_dat_200
+drone_dat <- drone_dat_200
+ndvi <- as.numeric(drone_dat$Ave_NDVI)
+live_veg <- as.numeric(ground_dat$`%live veg`)
+fit<- lm(live_veg ~ poly(ndvi,degree=2))
+prd <- data.frame(hp = seq(from = range(ndvi)[1], to = range(ndvi)[2], length.out = 200))
+err <- predict(fit, newdata = prd, se.fit = TRUE)
+
+prd$lci <- err$fit - 1.96 * err$se.fit
+prd$fit <- err$fit
+prd$uci <- err$fit + 1.96 * err$se.fit
+
+#theme_update(plot.title = element_text(hjust = 'center'))
+ggplot(prd, aes(x = ndvi, y = fit))+ ggtitle("Live Vegetation vs. NDVI") +
+  theme_bw() +
+  geom_line() +
+ # geom_smooth(aes(ymin = lci, ymax = uci), stat = "identity") +
+  geom_point(aes(x = ndvi, y = live_veg)) + xlab('NDVI') + ylab('Live Vegetation')+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+
+
+
+```{r echo=FALSE,fig.align="center"}
+
+ground_dat <- ground_dat_200
+drone_dat <- drone_dat_200
+
+ndvi <- as.numeric(drone_dat$Ave_NDVI)
+live_veg <- as.numeric(ground_dat$`%live veg`)
+
+regression<- lm(live_veg ~ poly(ndvi,degree=2))
+dev.new(width=5, height=5, unit="in")
+plot(ndvi,live_veg, xlab = "Average NDVI", ylab = "Coverage", cex = 0.75, cex.lab = 1.25, pch= 1)
+
+
+#summary(regression)
+
+r_squared = format(summary(regression)$adj.r.squared, digits=3)
+
+
+new<- data.frame(ndvi = sort(ndvi))
+pre <- predict(regression,newdata = new)
+
+lines(new$ndvi,pre, col = "blue")
+legend("topleft", bty="n", legend = TeX("$R^2= 0.832$"), x.intersp=0, xjust=0, yjust=0, cex = 1.25 )
+```
+
+## Live Veg vs VARI
+
+Visibily Atmospherically Resistant Index
+$$\textrm{VARI}=\frac{\textrm{GREEN}-\textrm{RED}}{\textrm{GREEN}+\textrm{RED}-\textrm{1}}$$
+
+Multiple R-squared:  0.8338
+```{r echo=FALSE,fig.align="center"}
+load("./RData/drone_dat_VARI_200.RData")
+
+
+ground_dat <- ground_dat_200
+drone_dat <- drone_dat_VARI_200
+
+vari <- as.numeric(drone_dat$Ave_NDVI)
+live_veg <- as.numeric(ground_dat$`%live veg`)
+
+regression<- lm(live_veg ~ poly(vari,degree=2))
+plot(vari,live_veg)
+#summary(regression)
+
+new<- seq(min(vari),max(vari),0.01)
+new
+pre <- predict(regression,newdata = new,inverval = "prediction")
+lines(new,pre, col = "blue")
+
+
+```
+
+
+## Live Veg vs Simple
+
+Simple/Ratio Vegetation Index
+$$\textrm{SIMPLE}=\frac{\textrm{NIR}}{\textrm{RED}}$$
+Multiple R-squared:  0.8156
+```{r echo=FALSE,fig.align="center"}
+load("./RData/drone_dat_simple_200.RData")
+
+ground_dat <- ground_dat_200
+drone_dat <- drone_dat_Simple_200
+
+simple <- as.numeric(drone_dat$Ave_NDVI)
+live_veg <- as.numeric(ground_dat$`%live veg`)
+
+regression<- lm(live_veg ~ poly(simple,degree=2))
+plot(simple,live_veg)
+#summary(regression)
+
+new<- data.frame(simple = sort(simple))
+pre <- predict(regression,newdata = new,inverval = "prediction")
+lines(new$simple,pre, col = "blue")
+```
+
+
+## Live Veg vs RDVI
+
+Renormalized Difference Vegetation Index
+
+$$\textrm{RDVI}=\frac{\textrm{NIR}-\textrm{RED}}{\sqrt{\textrm{NIR}+\textrm{RED}}}$$
+
+Multiple R-squared:  0.8506
+```{r echo=FALSE,fig.align="center"}
+
+load("./RData/drone_dat_RDVI_200.RData")
+
+ground_dat <- ground_dat_200
+drone_dat <- drone_dat_RDVI_200
+
+rdvi <- as.numeric(drone_dat$Ave_NDVI)
+live_veg <- as.numeric(ground_dat$`%live veg`)
+
+regression<- lm(live_veg ~ poly(rdvi,degree=2))
+plot(rdvi,live_veg)
+#summary(regression)
+
+new<- data.frame(rdvi = sort(rdvi))
+pre <- predict(regression,newdata = new,inverval = "prediction")
+lines(new$rdvi,pre, col = "blue")
+```
+
+## Live Veg vs. TGI
+
+Triangular Vegetation Index
+
+Multiple R-squared:  0.03284
+```{r echo=FALSE,fig.align="center"}
+
+load("./RData/drone_dat_TGI_200.RData")
+
+ground_dat <- ground_dat_200
+drone_dat <- drone_dat_TGI_200
+
+tgi <- as.numeric(drone_dat$Ave_NDVI)
+live_veg <- as.numeric(ground_dat$`%live veg`)
+
+regression<- lm(live_veg ~ poly(tgi,degree=2))
+plot(tgi,live_veg)
+#summary(regression)
+
+new<- data.frame(TGI = tgi)
+pre <- predict(regression,newdata = new,inverval = "prediction")
+lines(sort(tgi),sort(pre), col = "blue")
+
+
+```
+
+## Live Veg vs. NLI
+
+Non-Linear Index
+$$\textrm{NLI}=\frac{{\textrm{NIR}}^2-\textrm{RED}}{{\textrm{NIR}}^2+\textrm{RED}}$$
+Multiple R-squared:  0.4931
+```{r echo=FALSE,fig.align="center"}
+load("./RData/drone_dat_NLI_200.RData")
+
+
+ground_dat <- ground_dat_200
+drone_dat <- drone_dat_NLI_200
+
+nli <- as.numeric(drone_dat$Ave_NDVI)
+live_veg <- as.numeric(ground_dat$`%live veg`)
+
+regression<- lm(live_veg ~ poly(nli,degree=2))
+plot(nli,live_veg)
+#summary(regression)
+
+new<- data.frame(NLI = nli)
+pre <- predict(regression,newdata = new,inverval = "prediction")
+lines(sort(nli),sort(pre), col = "blue")
+```
+
+## Live Veg vs. NDRE
+
+Normalized Difference Red Index
+$$\textrm{NDRE}=\frac{\textrm{NIR} -\textrm{RED_EDGE}}{\textrm{NIR}+\textrm{RED_EDGE}}$$
+
+
+
+Multiple R-squared:  0.7841
+```{r echo=FALSE,fig.align="center"}
+load("./RData/drone_dat_NDRE_200.RData")
+
+ground_dat <- ground_dat_200
+drone_dat <- drone_dat_NDRE_200
+
+ndre <- as.numeric(drone_dat$Ave_NDVI)
+live_veg <- as.numeric(ground_dat$`%live veg`)
+
+regression<- lm(live_veg ~ poly(ndre,degree=2))
+plot(ndre,live_veg)
+#summary(regression)
+
+new<- data.frame(NDRE = ndre)
+pre <- predict(regression,newdata = new,inverval = "prediction")
+lines(sort(ndre),sort(pre), col = "blue")
+
+```
+
+## Live Veg vs. SAVI
+
+Soil-adjusted vegeation index
+$$\textrm{NDVI}=2\times\frac{\textrm{NIR}-\textrm{RED}}{\textrm{NIR}+\textrm{RED}+1}$$
+Multiple R-squared:  0.8338
+```{r echo=FALSE,fig.align="center"}
+
+load("./RData/drone_dat_SAVI_200.RData")
+
+ground_dat <- ground_dat_200
+drone_dat <- drone_dat_SAVI_200
+
+savi <- as.numeric(drone_dat$Ave_NDVI)
+live_veg <- as.numeric(ground_dat$`%live veg`)
+
+regression<- lm(live_veg ~ poly(savi,degree=2))
+plot(savi,live_veg)
+#summary(regression)
+
+new<- data.frame(SAVI = savi)
+pre <- predict(regression,newdata = new,inverval = "prediction")
+lines(sort(savi),sort(pre), col = "blue")
+
+
+
+```
+
+## Live Veg vs. PVI
+```{r echo=FALSE}
+drone_image <- brick("./Drone_Stitched/ortho.tif")
+
+#NIR<- extract(drone_image[[5]],extent(drone_image[[5]]),method =`simple`)
+#RED<- extract(drone_image[[3]], extent(drone_image[[3]]),method = `simple`)
+
+NIR <- drone_image[[5]]
+RED <- drone_image[[3]] 
+
+plot(NIR,RED,xlim = c(0,25000), ylim = c(0,15000))
+
+
+```
+
+## Live Veg vs. Hand Counts
+
+Live Vegeation estimates using classified ground imagery vs. HandCounts
+
+Multiple R-squared:  0.4836
+```{r echo=FALSE,fig.align="center"}
+df <- read.csv("./Misc/Stem_Counts.csv")
+
+
+live_veg <- as.numeric(ground_dat_200$`%live veg`)
+
+stems <- as.data.frame((df[3:8]))
+stems<- as.numeric(rowSums(stems))
+
+regression<- lm(live_veg ~ poly(stems,degree=2))
+#summary(regression)
+
+new<- data.frame(stems = sort(stems))
+pre <- predict(regression, newdata = new,inverval = "prediction")
+plot(stems,live_veg)
+lines(new$stems,pre, col = "blue")
+
+#plot(as.numeric(df$mStems)+as.numeric(df$srStems)+as.numeric(df$mwStems),jitter(df$ggtCov,2) )
+#plot(live_veg,jitter(df$ggtCov,2),xlim = c(0,0.5),ylim = c(0,15))
+```
+
+## Not Live vs Hand Counts
+```{r echo=FALSE,fig.align="center"}
+#df <- read.csv("/Volumes/GoogleDrive/My Drive/Research/Research_2019/Stem_Counts.csv")
+#load("/Volumes/GoogleDrive/My Drive/Research/Research_2019/drone_dat_200.RData")
+#load("/Volumes/GoogleDrive/My Drive/Research/Research_2019/ground_dat_200.RData")
+
+handcounts_not_live <- as.numeric(1-df$ggtCov)
+ground_not_live <- as.numeric(ground_dat_200$`%sand`)+as.numeric(ground_dat_200$`%dead veg`)
+
+regression<- lm(handcounts_not_live ~ poly(ground_not_live,degree=2))
+plot(ground_not_live,handcounts_not_live)
+#summary(regression)
+
+new<- data.frame(ground_not_live = sort(ground_not_live))
+pre <- predict(regression, newdata = new,inverval = "prediction")
+
+lines(new$ground_not_live,pre, col = "blue")
+```

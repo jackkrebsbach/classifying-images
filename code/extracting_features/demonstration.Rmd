@@ -22,7 +22,7 @@ library(reticulate)
 #Python Environment and Script Sourcing
 Sys.setenv(RETICULATE_PYTHON = '/Users/krebsbach/pyenvs/reticulate/bin/python3')
 source_python("code/extracting_features/library/meanshift_segmentation.py")
-
+x
 #Texture Calcuation
 source("code/extracting_features/library/glcm_texture.R")
 

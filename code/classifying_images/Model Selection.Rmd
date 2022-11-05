@@ -7,7 +7,7 @@ output: html_document
 
 ## Load Libraries
 ```{r setup, include=FALSE}
-knitr::opts_knit$set(root.dir=normalizePath("../..")) #set working directory to the project directory
+knitr::opts_knit$set(root.dir = normalizePath("../..")) #set working directory to the project directory
 library(tidyverse)
 library(tidymodels)
 library(ranger)
@@ -20,10 +20,11 @@ library(sf)
 
 ```{r}
 source('./code/helpers/classify_helpers.R')
-full_train <- readRDS('./clean_data/rdata/pixel_values/training_set.rds')
-full_val <- readRDS('./clean_data/rdata/pixel_values/validation_set.rds')
+full_train <-
+  readRDS('./clean_data/rdata/pixel_values/training_set.rds')
+full_val <-
+  readRDS('./clean_data/rdata/pixel_values/validation_set.rds')
 ```
-
 
 ## Take 50,000 pixels per class from the training set
 
@@ -33,7 +34,7 @@ train <- full_train %>%
   group_by(label) %>%
   slice_sample(n = 50000) %>% # n is the number of pixels per polygon that we want to sample
   ungroup() %>%
-  select(-c(quadrat, cell, poly_num, area, polys,key, train_val))
+  select(-c(quadrat, cell, poly_num, area, polys, key, train_val))
 
 val <- full_val
 ```
@@ -44,11 +45,13 @@ val <- full_val
 show_engines("rand_forest")
 
 rf_mod <-
-  rand_forest(mtry = tune(), min_n = tune(), trees = 1000) %>% 
-  set_engine("ranger", num.threads = cores) %>% 
+  rand_forest(mtry = tune(),
+              min_n = tune(),
+              trees = 1000) %>%
+  set_engine("ranger", num.threads = cores) %>%
   set_mode("classification")
 
-rf_recipe <- 
+rf_recipe <-
   recipe(label ~ ., data = train)
 
 rf_workflow <-
@@ -56,10 +59,3 @@ rf_workflow <-
   add_model(rf_mod) %>%
   add_recipe(rf_recipe)
 ```
-
-
-
-
-
-
-

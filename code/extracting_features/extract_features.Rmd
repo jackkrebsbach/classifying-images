@@ -19,7 +19,7 @@ source("code/extracting_features/library/setup.R")
 ```{r}
 cl <- new_cluster(6) %>%
   cluster_library("tidyverse") %>%
-  cluster_library("stringr") %>%
+  clusxter_library("stringr") %>%
   cluster_library("glcm") %>%
   cluster_library("imager") %>%
   cluster_library("raster")%>%

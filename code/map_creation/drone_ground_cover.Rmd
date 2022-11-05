@@ -1,0 +1,100 @@
+---
+title: "Empirical Model Data Frames"
+author: "Jack Krebsbach"
+date: "6/17/2019"
+output: html_document
+---
+
+## Setup
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir=normalizePath("../..")) #set working directory to the project
+knitr::opts_chunk$set(echo = TRUE)
+gc()
+rm(list =ls())
+```
+
+## Libraries
+```{r}
+source("code/map_creation/polygon_function.R")
+source("code/map_creation/vegetation_indicies.R")
+library(sp)
+library(rgdal)
+library(raster)
+library(rgeos)
+library(randomForest)
+library(jpeg)
+library(graphics)
+library(grDevices)
+library(magick)
+library(pracma)
+library(ggplot2)
+library(gridExtra)
+library(ggplot2)
+```
+
+
+First create a data frame, one quadrat per row, of average NDVI.
+
+## Drone Frame creation
+```{r}
+#Data should be here https://drive.google.com/drive/u/0/folders/1aQyisXSCmXwFBbF6V0zE0omzLE1NFTQG
+drone_image <- brick("clean_data/drone_sitched/ortho.tif")
+drone_coords <- readOGR("clean_data/drone_sitched/", "coord_layer")
+
+drone_dat <- data.frame(matrix(ncol = 11, nrow = 1))
+colnames(drone_dat) <- append(c("Quadrat", "Quadrant"), indnames)
+
+for (n in 34:83) {
+  polygon <- subset(drone_coords, id == n)
+  
+  for (l in 0:3) {
+    # Polygon Function takes in the qudarat number  (0-3) and creates a polygon based off the coordinates manually made
+    poly   <- Polygon.Function(l, polygon)
+    pixels <- crop(drone_image, poly)
+    row <- c(n, l)
+    
+    for (index in indices) {
+      ave <- index(pixels)
+      # Find the  average NDVI for each quadrat
+      ave <- cellStats(ave, stat = 'mean', na.rm = TRUE)
+      row <- append(row, ave)
+    }
+    drone_dat <- rbind(drone_dat, row)
+  }
+  print(paste0('Quadrat ', n))
+}
+drone_dat <- drone_dat[-1, ]
+drone_dat
+```
+
+Next create a data frame for the classified ground-based photographs, one quadrat per row, of pixel classes
+
+## Ground Frame creation
+```{r}
+options(digits = 3)
+x <- sprintf("./Quadrats_Processed/Quadrat_%03d/", seq(34, 83, 1))
+groundcov <- data.frame(matrix(ncol = 5, nrow = 1))
+colnames(groundcov) <-
+  c("Quadrat", "Quadrant", "%sand", "%live veg", "%dead veg")
+
+for (n in 1:length(x)) {
+  classified <- raster(paste0(x[n], 'classified3.tif'))
+  polygon <- readOGR(x[n], "corners_layer")
+  
+  for (l in 0:3) {
+    poly <- as(Polygon.Function(l, polygon), 'SpatialPolygonsDataFrame')
+    pixels <- as.data.frame(table(extract(classified, poly)))
+    classes <- as.numeric(unique(pixels$Var1))
+    total <- sum(pixels$Freq)
+    row <- c(n + 33, l)
+    
+    for (class in classes) {
+      per <- subset(pixels, pixels == class)$Freq / total
+      per[is.na(per)] <- 0
+      row <- append(row, per)
+    }
+    groundcov <- rbind(groundcov, row)
+  }
+}
+groundcov <- groundcov[-1,]
+```
