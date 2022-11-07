@@ -61,8 +61,9 @@ Next create a data frame for the classified ground-based photographs, one quadra
 ## Ground Frame creation
 ```{r}
 options(digits = 3)
-#Put paths too classified images here
-x <- sprintf("clean_data/", seq(34, 83, 1))
+#Put paths to classified images here
+#https://drive.google.com/drive/u/0/folders/1Eh9ogyO4wsmOubIkrCwgXjLZzp1PiNVQ
+x <- sprintf("clean_data/archive/quadrats/Quadrat_%03d/", seq(34, 83, 1))
 
 groundcov <- data.frame(matrix(ncol = 5, nrow = 1))
 colnames(groundcov) <-

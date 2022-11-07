@@ -157,9 +157,7 @@ for(quadrat in quadrats){
 }
 ```
 
-
 ## Extract all pixels from polygons using the previous defined functions
-
 Using a for loop is okay for now probably want to switch it to something else to be able to extract pixels using parallelism 
 ```{r}
 layers <- list.files("./clean_data/quadrats/quadrat35/", pattern = '.tif') %>%
