@@ -12,7 +12,7 @@ Load libraries and scrips
 ```{r}
 library(sf)
 library(tidyverse)
-source("code/lib/veggie_utils.R")
+source("code/lib/spatial-utils.R")
 ```
 
 # Sample polygons used to extract pixels for training

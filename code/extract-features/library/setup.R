@@ -9,9 +9,9 @@ Sys.setenv(
   RETICULATE_PYTHON = '/Users/krebsbach/pyenvs/reticulate/bin/python3'
   )
 
-source("code/extracting_features/library/glcm_texture.R")
-source("code/extracting_features/library/color_space_transformation.R")
-source_python("code/extracting_features/library/meanshift_segmentation.py")
+source("code/extract-features/library/glcm_texture.R")
+source("code/extract-features/library/color_space_transformation.R")
+source_python("code/extract-features/library/meanshift_segmentation.py")
 
 color_transforms_function <- function(inpaths, transforms, doComp = FALSE, overWrite = FALSE){
   

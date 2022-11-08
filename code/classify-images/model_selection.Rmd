@@ -19,7 +19,7 @@ library(sf)
 ## Load training and validation and helper functions
 
 ```{r}
-source('code/lib/classification_utils.R')
+source('code/classify-images/classify-image.R')
 full_train <-
   readRDS('clean_data/rdata/pixel_values/training_set.rds')
 full_val <-

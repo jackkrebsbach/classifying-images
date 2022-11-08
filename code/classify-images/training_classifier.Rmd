@@ -17,7 +17,7 @@ library(rlist)
 
 ## Source Files and build classifier model
 ```{r, echo=FALSE, results=FALSE, message=FALSE, include=FALSE }
-source('./code/lib/classification_utils.R')
+source('code/classify-images/classify-image.R')
 show_engines("rand_forest")
 rf_pixel_model <- rand_forest() %>%
                   set_engine("ranger", importance = "impurity") %>%
@@ -28,55 +28,45 @@ rf_pixel_model <- rand_forest() %>%
 
 ## Get a list of clean pixels that make up a training, validation, and testing set
 ```{r}
-'%!in%' <- function(x,y)!('%in%'(x,y))
+'%!in%' <- function(x, y)
+  ! ('%in%'(x, y))
 
 #List of all the polygons that have errors or need to be removed
-problem_polygons <- read_csv("clean_data/polygons_to_remove.csv") %>%
+problem_polygons <-
+  read_csv("clean_data/polygons_to_remove.csv") %>%
   mutate(quadrat = quadrat - 33) %>%
-  mutate(key = paste0(quadrat,"_",poly_num))
+  mutate(key = paste0(quadrat, "_", poly_num))
 
 #List of class changes that need to be done on the polygons
-poly_classes_to_change <- read_csv("clean_data/polygon_class_changes.csv") %>%
+poly_classes_to_change <-
+  read_csv("clean_data/polygon_class_changes.csv") %>%
   mutate(quadrat = as.numeric(quadrat - 33)) %>%
-  mutate(key = paste0(quadrat,"_",poly_num))%>%
+  mutate(key = paste0(quadrat, "_", poly_num)) %>%
   dplyr::select(c(key, class_to_change_to))
 
 
 #All the pixel values from every polygon
 pixels <- readRDS('clean_data/rdata/pixel_values/pixels.rds') %>%
-  as_tibble() %>% 
-  mutate(key = paste0(quadrat,"_",poly_num)) %>%
-  filter(key %!in% problem_polygons$key) 
+  as_tibble() %>%
+  mutate(key = paste0(quadrat, "_", poly_num)) %>%
+  filter(key %!in% problem_polygons$key)
 
 # Remove the polygons with errors and mutate the ones that need a class change
 clean_pixels <- pixels %>%
   left_join(poly_classes_to_change) %>%
-  mutate(label = as.factor(label), class_to_change_to = as.factor(class_to_change_to)) %>%
-  mutate(label = case_when(is.na(class_to_change_to) ~ label,
-                           !is.na(class_to_change_to) ~ class_to_change_to)) %>%
+  mutate(label = as.factor(label),
+         class_to_change_to = as.factor(class_to_change_to)) %>%
+  mutate(label = case_when(
+    is.na(class_to_change_to) ~ label,!is.na(class_to_change_to) ~ class_to_change_to
+  )) %>%
   dplyr::select(-class_to_change_to)
 
-saveRDS(clean_pixels, 'clean_data/rdata/pixel_values/clean_pixels.rds')
+saveRDS(clean_pixels,
+        'clean_data/rdata/pixel_values/clean_pixels.rds')
 ```
-
-
-
-```{r}
-
-full_train <- clean_pixels %>% 
-  filter(train_val == 'train') %>%
-  select(-c(train_val, cell, dir, inpath, area, poly_num, quadrat, key))
-
-```
-
-
-
-
-
-
-
 
 ## Train test split
+
 ```{r}
 full_train <- clean_pixels %>% 
   filter(train_val == 'train') %>%
@@ -98,7 +88,6 @@ subset_training <- full_train %>%
   ungroup()
 #conf_matrix <- classify_train_val(train = subset_training, val = full_val)
 ```
-
 
 ## Test Single Layer
 ```{r}

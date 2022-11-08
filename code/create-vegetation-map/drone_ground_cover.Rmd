@@ -15,8 +15,8 @@ rm(list =ls())
 
 ## Libraries
 ```{r}
-source("code/map_creation/polygon_function.R")
-source("code/map_creation/vegetation_indices.R")
+source("code/create-vegetation-map/polygon_function.R")
+source("code/create-vegetation-map/vegetation_indices.R")
 library(sp)
 library(raster)
 library(rgdal)

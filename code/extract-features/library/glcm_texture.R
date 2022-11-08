@@ -1,7 +1,7 @@
 library(stringr)
 library(raster)
 library(glcm)
-source("code/lib/file_path_utils.R")
+source("code/lib/parse-file-path.R")
 
 calculate_texture <- function(inpath, window = 5, statistic = "contrast", layer = 1L, doComp = TRUE) {
   #Texture Path to Write

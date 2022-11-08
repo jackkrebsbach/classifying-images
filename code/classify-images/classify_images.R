@@ -1,6 +1,6 @@
 #Load Model
-load('code/rdata/rf_fit.RData')
-source('code/lib/classification_utils.R')
+load('clean_data/rdata/rf_fit.RData')
+source('code/classify-images/classify-image.R')
 
 quadrat_dirs <-
   sprintf("clean_data/quadrats/quadrat%02d/", seq(34, 83, 1))

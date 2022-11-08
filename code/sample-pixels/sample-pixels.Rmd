@@ -21,9 +21,9 @@ library(jsonlite)
 library(tictoc)
 library(multidplyr)
 library(exactextractr)
-source("code/pixel_sampling/extract_pixels.R")
-source("code/lib/veggie_utils.R")
-source("code/lib/file_path_utils.R")
+source("code/sample-pixels/extract-pixels.R")
+source("code/lib/spatial-utils.R")
+source("code/lib/parse-file-path.R")
 ```
 
 ## Read in polygon data 
@@ -94,7 +94,7 @@ pixel_data <- data %>%
   collect() %>%
   arrange(directory)
 toc()
-pixel_data[42,]$pixels
+pixel_data
 ```
 
 

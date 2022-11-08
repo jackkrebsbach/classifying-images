@@ -44,8 +44,9 @@ Polygon.Function <- function(quadrant, coordinates) {
     coords = matrix(c(c, i, iii, ii, c), ncol = 2, byrow = TRUE)
   }
   
-  P1 = Polygon(coords)
-  quadrant <- SpatialPolygons(list(Polygons(list(P1), ID = "a")))
+  polygon <- Polygon(coords)
+  quadrant <-
+    SpatialPolygons(list(Polygons(list(polygon), ID = "a")))
   return(quadrant)
 }
 
