@@ -17,7 +17,6 @@ poly_from_mat <- function(point_matrix, im_ht) {
 #function that takes json file name from labelme as input and outputs sf object
 
 label_me_json_to_sf <- function(json_path) {
-  json_path <- "clean_data/quadrats/quadrat34/rgb.json"
   #read in json file from labelme
   labeled_polys_list <-
     read_json(json_path, simplifyVector = TRUE)

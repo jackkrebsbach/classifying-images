@@ -1,0 +1,101 @@
+---
+title: "Sampling Training Set"
+author: "Jackson Krebsbach"
+date: "6/1/2021"
+output: html_document
+---
+## Setup
+
+```{r setup, include=FALSE, echo = FALSE}
+require("knitr")
+knitr::opts_knit$set(root.dir=normalizePath("../.."))
+```
+
+## Load Libraries and functions
+
+```{r,echo = FALSE, results='hide', message=FALSE}
+library(sf)
+library(raster)
+library(tidyverse)
+library(jsonlite)
+library(tictoc)
+library(multidplyr)
+library(exactextractr)
+source("code/pixel_sampling/extract_pixels.R")
+source("code/lib/veggie_utils.R")
+source("code/lib/file_path_utils.R")
+```
+
+## Read in polygon data 
+
+We extract all the pixels from with the polygons drawn and labeled using labelme.
+First read in the polygons that we previously sampled
+
+```{r}
+file_directories <-
+  tibble(directory = seq(1, 50))
+
+quadrat_paths <-
+  tibble(
+    quadrat_path = sprintf("clean_data/quadrats/quadrat%02d/", seq(34, 83, 1)),
+    directory = seq(1, 50)
+  ) 
+
+layers <-
+  list.files("clean_data/quadrats/quadrat35/", pattern = '.tif') %>%
+  str_split(pattern = '.tif', n = 1) %>%
+  unlist()
+
+layer_names <-
+  tibble(image_name = layers) %>%
+  full_join(file_directories, by = character())
+
+layer_paths <- layer_names %>%
+  left_join(quadrat_paths, by = "directory") %>%
+  rowwise() %>%
+  mutate(layer_path = paste0(quadrat_path, image_name)) %>%
+  ungroup()
+
+polygon_data <-
+  readRDS("clean_data/polygons/polys_sf.rds") %>%
+  mutate(directory = as.integer(dir)) %>%
+  mutate(key = paste0(directory, "_", poly_num)) %>%
+  select(-c(imagePath, dir))
+
+data <- layer_paths %>%
+ nest_join(polygon_data)
+```
+
+
+## Extract all pixels from polygons
+mutate(across(everything(), ~ replace_na(.x, 255)))
+Extract all the pixels, should take an hour for ~20-40 polygons per quadrat with ~50 features each
+
+```{r}
+cl <- new_cluster(7) %>%
+  cluster_library("tidyverse") %>%
+  cluster_library("stringr") %>%
+  cluster_library("raster") %>%
+  cluster_library("dplyr") %>%
+  cluster_library("exactextractr") %>%
+  cluster_copy('extract_pixels')
+
+tic()
+pixel_data <- data %>%
+  group_by(layer_path) %>%
+  partition(cl) %>%
+  summarise(
+    polygons = polygon_data,
+    pixels = list(extract_pixels(layer_path[[1]], polygon_data[[1]])),
+    image_name = image_name,
+    directory = directory
+  ) %>%
+  ungroup() %>%
+  collect() %>%
+  arrange(directory)
+toc()
+pixel_data[42,]$pixels
+```
+
+
+

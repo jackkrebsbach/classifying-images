@@ -7,7 +7,7 @@ output: html_document
 
 ## Setup
 ```{r setup, include=FALSE}
-knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_knit$set(root.dir=normalizePath("../.."))
 ```
 
 ## Source Functions

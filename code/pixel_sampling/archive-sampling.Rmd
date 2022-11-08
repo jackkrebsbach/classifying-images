@@ -1,0 +1,285 @@
+---
+title: "old-pixel-extraction"
+author: "Jack Krebsbach"
+date: "11/8/2022"
+output: html_document
+---
+
+
+```{r setup, include=FALSE, echo = FALSE}
+require("knitr")
+knitr::opts_knit$set(root.dir=normalizePath("../.."))
+```
+
+## Load Libraries and functions
+
+```{r,echo = FALSE, results='hide', message=FALSE}
+library(sf)
+library(raster)
+library(tidyverse)
+library(jsonlite)
+library(tictoc)
+library(multidplyr)
+library(exactextractr)
+source("code/lib/veggie_utils.R")
+source("code/lib/file_path_utils.R")
+```
+
+
+Might not want to extract by layer because we might read in and out memory the layer?
+Still need to research this if this is actually the case.
+
+```{r}
+extract_points_from_quadrat <- function(dir, layer, inpath, label, polys, area, poly_num, train_val){
+  out_file <- layer %>%
+    get_layer() %>%
+    paste0('.rds')
+  
+  out_path <-
+    paste0("clean_data/rdata/pixel_values/features/", out_file)
+  
+  if (!file.exists(out_path)) {
+    args <-
+      list(dir, layer, inpath, label, polys, area, poly_num, train_val)
+  
+    args %>%
+      pmap(.f = extract_points) %>%
+      bind_rows() %>%
+      saveRDS(file = out_path)
+  }
+  
+  return(out_path)
+}
+
+
+extract_points <- function(dir, layer, inpath, label, polys, area, poly_num, train_val) {
+  
+  poly_info <- tibble(dir, layer, inpath, label, area, poly_num, train_val)
+  
+  polys_to_extract <- polys %>%
+    st_sfc() %>%
+    st_as_sf()
+
+  img <- inpath  %>%
+    brick()
+
+  extent(img) <- c(0,4032,0,3024)
+
+  raster::extract(img, polys_to_extract, cellnumbers = TRUE )[[1]]  %>%
+    as_tibble() %>%
+    full_join(poly_info, by = character()) %>%
+    mutate(label = as.factor(label)) %>%
+    return()
+}
+```
+
+Create Cluster 
+
+```{r}
+cl <- new_cluster(6) %>%
+  cluster_library("tidyverse") %>%
+  cluster_library("stringr") %>%
+  cluster_library("imager") %>%
+  cluster_library("raster")%>%
+  cluster_library("dplyr") %>%
+  cluster_copy('get_layer') %>%
+  cluster_copy('extract_points') %>%
+  cluster_copy("extract_points_from_quadrat")
+```
+
+```{r}
+poly_data <-
+  readRDS("./clean_data/rdata/pixel_values/polys_sf.rds") %>%
+  dplyr::select(-imagePath) %>%
+  mutate(dir = quadrat + 33) %>%
+  select(-quadrat) %>%
+  bind_rows()
+
+quadrat <-
+  tibble(
+    quadrat = sprintf("clean_data/quadrats/quadrat%02d/", seq(34, 83, 1)),
+    dir =  seq(34, 83, 1)
+  )
+
+layer <-
+  tibble(layer = list.files("./clean_data/quadrats/quadrat34/", pattern = '.tif'))
+
+
+extraction_parameters <- quadrat %>%
+  full_join(layer, by = character()) %>%
+  mutate(inpath = paste0(quadrat, layer)) %>%
+  right_join(poly_data, by = c('dir')) %>%
+  select(-c(quadrat))
+
+tic()
+feature_out <- extraction_parameters %>%
+  mutate(inpath_exists = file.exists(inpath)) %>%
+  group_by(layer) %>%
+  mutate(inpath_exists = all(inpath_exists)) %>%
+  filter(inpath_exists == TRUE)  %>%
+  partition(cl) %>%
+  summarise(outpath = extract_points_from_quadrat(dir, layer, inpath, label, polys, area, poly_num, train_val)) %>%
+  mutate(outpath_exists = file.exists(outpath)) %>%
+  collect()
+toc()
+extraction_parameters
+```
+
+## Check to make sure all quadrats have the same layers
+```{r}
+first_quadraat_files <- list.files("./clean_data/quadrats/quadrat34/")
+length<- length(first_quadraat_files)
+
+quadrats<- sprintf("clean_data/quadrats/quadrat%02d", seq(34,83))
+
+for(quadrat in quadrats){
+  if(!identical(first_quadraat_files, list.files(quadrat))){
+    print(quadrat)
+    print('not ok')
+    len <- quadrat  %>% list.files() %>% length()
+     print(len)
+  }
+  if(!file.exists(paste0(quadrat,'/yuv_seg_6_4.5_30.tif'))){
+    print(quadrat)
+    print('not okay')
+  }
+}
+```
+
+
+## Join Pixel Values
+
+```{r}
+poly_data <- 
+  readRDS("./clean_data/rdata/pixel_values/polys_sf.rds") %>%
+  dplyr::select(-imagePath) %>% 
+  mutate(dir = quadrat + 33) %>%
+  st_drop_geometry() %>%
+  dplyr::select(c(quadrat, poly_num, area, train_val, dir)) 
+
+
+total <- list()
+
+features <- list.files("clean_data/rdata/pixel_values/features/", full.names = TRUE)
+
+for(i in 1:length(features)){
+  
+  if(i == 1){
+ 
+  df <- features[[i]] %>%
+   readRDS %>%
+   full_join(poly_data, by = c('dir', 'poly_num', 'train_val', 'area')) %>%
+    select(-layer)
+  
+  } else {
+  df <- features[[i]] %>%
+    readRDS %>%
+    select(-c('cell', 'inpath', 'label', 'area', 'poly_num', 'train_val', 'dir', 'layer'))
+  }
+  total[[i]] <- df
+}
+
+pixels <- total %>%
+  bind_cols() %>%
+  relocate(hsv_contrast_L1_W3, .after = quadrat) %>%
+  select(-layer) 
+saveRDS(pixels, './clean_data/rdata/pixel_values/pixels.rds')
+```
+
+
+
+
+## Split Sets By Polygon Summary
+
+```{r}
+set.seed(8765309)
+
+train_val_split_summary <- tibble(
+  label = factor(c("dead vegetation", "live vegetation", "sand")),
+  train_n = c(302, 222, 189),
+  val_n = c(181, 133, 113),
+  test_n = c(121, 89, 76),
+)
+
+# check to make sure I can subtract
+label_counts %>%
+  full_join(train_val_split_summary) %>%
+  mutate(N = train_n + test_n + val_n)
+
+polys_sf %<>% bind_rows() %>%
+  train_val_split_polys(train_val_split_summary)
+
+# check to make sure it agrees
+polys_sf %>% st_make_valid() %>%
+  group_by(train_val) %>%
+  count(label)
+
+```
+
+
+## Sample pixels to extract data from
+```{r}
+NUM_TRAIN_PTS <- 50
+NUM_VAL_PTS <- 25
+NUM_TEST_PTS <- 15
+
+train_sf <- polys_sf %>% filter(train_val == "train")
+
+train_pts <- train_sf %>%
+  group_by(label, quadrat, poly_num, area) %>%
+  summarize(pts = st_sample(polys, size = NUM_TRAIN_PTS))
+
+
+val_sf <- polys_sf %>% filter(train_val == "val")
+
+val_pts <- val_sf %>%
+  group_by(label, quadrat, poly_num, area) %>%
+  summarize(pts = st_sample(polys, size = NUM_VAL_PTS))
+
+
+test_sf <- polys_sf %>% filter(train_val == "test")
+
+test_pts <- test_sf %>%
+  group_by(label, quadrat, poly_num, area) %>%
+  summarize(pts = st_sample(polys, size = NUM_TEST_PTS))
+```
+
+## Area by class
+```{r}
+ggplot(poly_summary, aes(x = area_class, y = area, label = n)) +
+  geom_col()  +
+  geom_text(nudge_y = 10000, size = 2) +
+  theme(axis.text.x = element_text(angle = 75, hjust=1,size = 5)) +
+  facet_grid(.~label, scales = "free_y")
+
+```
+
+
+## Look at training points 
+```{r}
+im_path <- "clean_data/quadrats/quadrat34/yuv.tif"
+json_path <- "clean_data/quadrats/quadrat34/rgb.json"
+
+sampled_pts <- test_pts %>% filter(quadrat == 1)
+
+
+p <- plot_labeled(im_path, json_path, maxpixels = 1e+6)
+p + geom_sf(data = sampled_pts, color = "black", size = 0.05)
+# ggsave("outputs/test_labeled_training_pts.pdf")
+```
+
+
+## Save Data
+```{r}
+save(train_values, file = "clean_data/rdata/math_fest/train_values.RData")
+save(val_values, file = "clean_data/rdata/math_fest/val_values.RData")
+save(test_values, file = "clean_data/rdata/math_fest/test_values.RData")
+```
+
+
+
+
+
+
+
+
