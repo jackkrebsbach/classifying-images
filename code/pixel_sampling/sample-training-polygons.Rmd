@@ -40,7 +40,9 @@ sample_polygons <- function(directory) {
   
   json %>%
     label_me_json_to_sf() %>% # Helper defined in library (code/lib/veggie_utils.R)
-    dplyr::mutate(quadrat = directory, area = st_area(.$polys)) %>%
+    dplyr::mutate(quadrat = directory + 33,
+                  dir = directory,
+                  area = st_area(.$polys)) %>%
     dplyr::mutate(label = case_when(label == "live Marram grass" ~ "live vegetation", TRUE ~ label)) %>%
     filter(is.element(label, c(
       "live vegetation", "dead vegetation", "sand"

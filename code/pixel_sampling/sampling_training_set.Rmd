@@ -4,63 +4,101 @@ author: "Jackson Krebsbach"
 date: "6/1/2021"
 output: html_document
 ---
+## Setup
 
-
-#Setup
 ```{r setup, include=FALSE, echo = FALSE}
 require("knitr")
 knitr::opts_knit$set(root.dir=normalizePath("../.."))
 ```
 
-#Load Libraries and functions
+## Load Libraries and functions
+
 ```{r,echo = FALSE, results='hide', message=FALSE}
-#rm(list = ls())
-#gc()
 library(sf)
 library(raster)
-library(RStoolbox)
-library(dplyr)
 library(tidyverse)
 library(jsonlite)
-library(magrittr)
 library(tictoc)
 library(multidplyr)
-library(stringr)
 library(exactextractr)
 library(tictoc)
+library(purrr)
 source("code/lib/veggie_utils.R")
 source("code/lib/file_path_utils.R")
 ```
 
-## Testing
+## Read in polygon data 
 
+We extract all the pixels from with the polygons drawn and labeled using labelme.
+First read in the polygons that we previously sampled
 ```{r}
+file_directories <-
+  tibble(directory = seq(1, 50))
 
-poly_data <- 
-  readRDS("clean_data/rdata/pixel_values/polys_sf.rds") %>%
-  dplyr::select(-imagePath) %>% 
-  dplyr::mutate(dir = quadrat + 33) %>%
-  dplyr::select(-quadrat) %>%
-  bind_rows() 
-tic()
+quadrat_paths <-
+  tibble(
+    quadrat_path = sprintf("clean_data/quadrats/quadrat%02d/", seq(34, 83, 1)),
+    directory = seq(1, 50)
+  ) 
 
-img <- brick("clean_data/quadrats/quadrat34/rgb.tif")
+layers <-
+  list.files("clean_data/quadrats/quadrat35/", pattern = '.tif') %>%
+  str_split(pattern = '.tif', n = 1) %>%
+  unlist()
 
-polygon <- poly_data %>%
-  filter(dir ==34) %>%
-  filter(poly_num == 1)
+layer_names <-
+  tibble(image_name = layers) %>%
+  full_join(file_directories, by = character())
 
-pixels <- exactextractr::exact_extract(img, polygon, include_cell = TRUE) 
+layer_paths <- layer_names %>%
+  left_join(quadrat_paths, by = "directory") %>%
+  rowwise() %>%
+  mutate(layer_path = paste0(quadrat_path, image_name)) %>%
+  ungroup()
 
-out <- pixels %>%
-  bind_rows()
-out
-toc()
-
+polygon_data <- 
+  readRDS("clean_data/polygons/polys_sf.rds") %>%
+  mutate(directory = as.integer(dir)) %>%
+  select(-c(imagePath, dir)) %>%
+  right_join(layer_paths, by = "directory")
+polygon_data
 ```
 
+# cl <- new_cluster(6) %>%
+#   cluster_library("tidyverse") %>%
+#   cluster_library("glcm") %>%
+#   cluster_library("imager") %>%
+#   cluster_library("raster") %>%
+#   cluster_library("exactextractr") %>%
+#   cluster_copy("extract_testing")
 
 ## Extract all pixels from polygons
+
+We do this by layer so we can hold in memory the raster
+```{r}
+data <- tibble(layer_names = layer_names)
+
+extract_testing <- function(polygon, image_path) {
+  image <- raster::brick(image_path)
+  exactextractr::exact_extract(img, polygon, include_cell = TRUE)
+}
+
+polygon_data
+
+tic()
+pixel_data <- polygon_data %>% 
+  slice_sample(n = 10) %>%
+  rowwise() %>%
+  mutate(pixels = extract_testing(polys, layer_path)) %>%
+  ungroup()
+
+pixels <- pixel_data$pixels %>%
+  bind_rows() %>%
+  mutate(across(everything(), ~ replace_na(.x, 255)))
+toc()
+pixel_data
+```
+
 ```{r}
 
 extract_points_from_quadrat <- function(dir, layer, inpath, label, polys, area, poly_num, train_val){
