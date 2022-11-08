@@ -2,7 +2,7 @@ library(raster)
 library(tidyverse)
 library(magick)
 library(imager)
-source("code/helpers/getFileInfo.R")
+source("code/lib/file_path_utils.R")
 
 # Define custom color space transforms here (transformations not in the imager package)
 # color_transform takes function names from imager package
