@@ -9,7 +9,7 @@ output: html_document
 #Setup
 ```{r setup, include=FALSE, echo = FALSE}
 require("knitr")
-knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_knit$set(root.dir=normalizePath("../.."))
 ```
 
 #Load Libraries and functions
@@ -19,27 +19,49 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 library(sf)
 library(raster)
 library(RStoolbox)
+library(dplyr)
 library(tidyverse)
 library(jsonlite)
 library(magrittr)
 library(tictoc)
 library(multidplyr)
 library(stringr)
+library(exactextractr)
+library(tictoc)
 source("code/lib/veggie_utils.R")
+source("code/lib/file_path_utils.R")
+```
+
+## Testing
+
+```{r}
+
+poly_data <- 
+  readRDS("clean_data/rdata/pixel_values/polys_sf.rds") %>%
+  dplyr::select(-imagePath) %>% 
+  dplyr::mutate(dir = quadrat + 33) %>%
+  dplyr::select(-quadrat) %>%
+  bind_rows() 
+tic()
+
+img <- brick("clean_data/quadrats/quadrat34/rgb.tif")
+
+polygon <- poly_data %>%
+  filter(dir ==34) %>%
+  filter(poly_num == 1)
+
+pixels <- exactextractr::exact_extract(img, polygon, include_cell = TRUE) 
+
+out <- pixels %>%
+  bind_rows()
+out
+toc()
+
 ```
 
 
 ## Extract all pixels from polygons
 ```{r}
-
-get_layer <- function(im_path){
-  im_path %>%
-    str_split( pattern = '.tif') %>%
-    .[[1]] %>%
-    .[1] %>%
-    return()
-}
-
 
 extract_points_from_quadrat <- function(dir, layer, inpath, label, polys, area, poly_num, train_val){
   

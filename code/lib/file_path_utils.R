@@ -26,6 +26,14 @@ getColorPath <- function(inpath, transform){
   return(paste0(out_dir, out_name)) 
 }
 
+get_layer <- function(im_path){
+  im_path %>%
+    str_split( pattern = '.tif') %>%
+    .[[1]] %>%
+    .[1] %>%
+    return()
+}
+
 getTexturePath <- function(inpath, window, statistic, layer){
   #Create texture file path to write
   out_file_dir <- inpath %>% 

@@ -1,13 +1,12 @@
-#library(sf)
-#library(tidyverse)
-#library(jsonlite)
-
+library(sf)
+library(tidyverse)
+library(jsonlite)
 #function that converts matrix to polygon
 poly_from_mat <- function(point_matrix, im_ht) {
   #transform y so origin is at bottom left corner of image
   point_matrix[, 2] <- im_ht - point_matrix[, 2]
   #repeat first point at end
-  point_matrix <- rbind(point_matrix, point_matrix[1,])
+  point_matrix <- rbind(point_matrix, point_matrix[1, ])
   point_matrix_list <- list(point_matrix)
   #create sf polygon
   poly <- st_polygon(point_matrix_list)
@@ -16,13 +15,17 @@ poly_from_mat <- function(point_matrix, im_ht) {
 
 
 #function that takes json file name from labelme as input and outputs sf object
+
 label_me_json_to_sf <- function(json_path) {
+  json_path <- "clean_data/quadrats/quadrat34/rgb.json"
   #read in json file from labelme
-  labeled_polys_list <- read_json(json_path, simplifyVector = TRUE)
+  labeled_polys_list <-
+    read_json(json_path, simplifyVector = TRUE)
   labeled_polys_list$imageData <- NULL
   
   #get the shapes data frame with all the stuff we want
-  labeled_polys_tib <- labeled_polys_list$shapes %>% as_tibble() %>%
+  labeled_polys_tib <-
+    labeled_polys_list$shapes %>% as_tibble() %>%
     mutate(imagePath = labeled_polys_list$imagePath)
   im_wid <- labeled_polys_list$imageWidth
   im_ht <- labeled_polys_list$imageHeight

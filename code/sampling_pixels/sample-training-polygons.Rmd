@@ -1,0 +1,63 @@
+---
+title: "Sample training polygons"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_knit$set(root.dir=normalizePath("../.."))
+```
+
+Load libraries and scrips
+```{r}
+library(sf)
+library(tidyverse)
+source("code/lib/veggie_utils.R")
+```
+
+# Sample polygons used to extract pixels for training
+
+Using labelme, polygons were drawn over ~50 ground-based photographs of regions within a coastal dune system (SHNA) consisting of a variety of ground cover classes (ex sand, vegetation)
+
+These polygons were manually labeled so a training, validation, and testing set could be generated to classify pixels
+at a pixel level using supervised machine learning.
+
+
+# Define function to sample polygons
+
+Because the quadrats were physically labeled in roman numerals 34-83, the ground-based images were placed into
+directories  accordingly named. These folders are sometimes refereed to as "directories". Due to this naming scheme one should be careful as there are 50 directories,
+1-50, but the quadrats are labeled 34-83.
+
+The function sample_polygons takes in a directory (1-50) and gets the json created from label me.
+
+```{r}
+sample_polygons <- function(directory) {
+  label_me_json_paths <-
+    sprintf("clean_data/quadrats/quadrat%02d/rgb.json", seq(34, 83, 1))
+  
+  json <- label_me_json_paths[directory]
+  
+  json %>%
+    label_me_json_to_sf() %>% # Helper defined in library (code/lib/veggie_utils.R)
+    dplyr::mutate(quadrat = directory, area = st_area(.$polys)) %>%
+    dplyr::mutate(label = case_when(label == "live Marram grass" ~ "live vegetation", TRUE ~ label)) %>%
+    filter(is.element(label, c(
+      "live vegetation", "dead vegetation", "sand"
+    ))) %>%
+    mutate(poly_num = c(1:length(polys)))
+}
+```
+
+# Sample polygons and save for later use
+
+```{r}
+polys_sf <- seq(1, 50) %>%
+  map(sample_polygons) %>%
+  bind_rows()
+
+(polys_sf %>% st_make_valid() %>% count(label) -> label_counts)
+#Save file in clean_data directory for future usage
+saveRDS(polys_sf, file = "clean_data/polygons/polys_sf.rds")
+```
+
