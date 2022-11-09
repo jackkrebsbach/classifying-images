@@ -1,7 +1,7 @@
 # quadrant (0-3) is a region within the quadrat
 # See https://docs.google.com/document/d/1fZsO6068yEvLJnU3if5tpVF9bU1i7cqadtJvj_2KteU/edit
 #
-Polygon.Function <- function(quadrant, coordinates) {
+create_quadrant_polygon <- function(quadrant, coordinates) {
   c <- slot(subset(coordinates, corner == "c"), "coords")
   c <- c(as.numeric(c[1]), as.numeric(c[2]))
   i <- slot(subset(coordinates, corner == "i"), "coords")
@@ -10,9 +10,8 @@ Polygon.Function <- function(quadrant, coordinates) {
   ii <- c(as.numeric(ii[1]), as.numeric(ii[2]))
   
   # In case we mislabeled corners 1 and 2 we flip them.
-  if (cross.product(ii - c, i - c)) {
-    i <- i
-    ii <- ii
+  if (cross_product(ii - c, i - c)) {
+    
   }
   else{
     i <- ii
@@ -57,7 +56,7 @@ to_3d <- function(t) {
 }
 
 
-cross.product <- function(x, y) {
+cross_product <- function(x, y) {
   z <- cross(to_3d(x), to_3d(y))
   
   if (z[3] > 0) {

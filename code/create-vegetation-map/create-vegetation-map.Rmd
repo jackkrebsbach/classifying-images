@@ -17,7 +17,7 @@ knitr::opts_knit$set(root.dir = normalizePath("../..")) #set working directory t
 library(raster)
 library(rgdal)
 library(stats)
-source("code/create-vegetation-map/polygon_function.R")
+source("code/create-vegetation-map/quadrat-polygon-function.R")
 
 # Load data of average value of vegetation indices and ground cover predictions
 # These data are not well documented, but can function as examples for how the
@@ -122,7 +122,7 @@ polygon_layer <-
 cropped_RGB <- raster::crop(NDVI, polygon_layer)
 coords <- readOGR(dsn = "Drone_Stitched", layer = "coord_layer")
 coord_78 <- subset(coords, id == 78)
-poly <- Polygon.Function("total", coord_78)
+poly <- create_quadrant_polygon("total", coord_78)
 
 masked <- mask(cropped_RGB, poly)
 masked_scaled <-

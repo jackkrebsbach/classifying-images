@@ -15,13 +15,12 @@ rm(list =ls())
 
 ## Libraries
 ```{r}
-source("code/create-vegetation-map/polygon_function.R")
-source("code/create-vegetation-map/vegetation_indices.R")
+source("code/create-vegetation-map/quadrat-polygon-function.R")
+source("code/create-vegetation-map/vegetation-indices.R")
 library(sp)
 library(raster)
 library(rgdal)
 ```
-
 
 First create a data frame, one quadrant per row, of average NDVI.
 
@@ -38,8 +37,8 @@ for (n in 34:83) {
   polygon <- subset(drone_coords, id == n)
   
   for (l in 0:3) {
-    # Polygon Function takes in the qudarat number  (0-3) and creates a polygon based off the coordinates manually made
-    poly   <- Polygon.Function(l, polygon)
+    # Polygon Function takes in the quadrant number  (0-3) and creates a polygon based off the coordinates manually made
+    poly   <- create_quadrant_polygon(l, polygon)
     pixels <- crop(drone_image, poly)
     row <- c(n, l)
     
@@ -74,7 +73,7 @@ for (n in 1:length(x)) {
   polygon <- readOGR(x[n], "corners_layer")
   
   for (l in 0:3) {
-    poly <- as(Polygon.Function(l, polygon), 'SpatialPolygonsDataFrame')
+    poly <- as(create_quadrant_polygon(l, polygon), 'SpatialPolygonsDataFrame')
     pixels <- as.data.frame(table(extract(classified, poly)))
     classes <- as.numeric(unique(pixels$Var1))
     total <- sum(pixels$Freq)
@@ -90,4 +89,3 @@ for (n in 1:length(x)) {
 }
 groundcov <- groundcov[-1, ]
 ```
-

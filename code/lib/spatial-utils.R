@@ -6,7 +6,7 @@ poly_from_mat <- function(point_matrix, im_ht) {
   #transform y so origin is at bottom left corner of image
   point_matrix[, 2] <- im_ht - point_matrix[, 2]
   #repeat first point at end
-  point_matrix <- rbind(point_matrix, point_matrix[1, ])
+  point_matrix <- rbind(point_matrix, point_matrix[1,])
   point_matrix_list <- list(point_matrix)
   #create sf polygon
   poly <- st_polygon(point_matrix_list)
@@ -69,4 +69,3 @@ train_val_split_polys <- function(polys, split_tib) {
     polys %>% arrange(label) %>% mutate(train_val = train_val)
   return(polys)
 }
-

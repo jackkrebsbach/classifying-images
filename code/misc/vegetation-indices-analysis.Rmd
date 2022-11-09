@@ -323,7 +323,6 @@ lines(new$stems,pre, col = "blue")
 #df <- read.csv("/Volumes/GoogleDrive/My Drive/Research/Research_2019/Stem_Counts.csv")
 #load("/Volumes/GoogleDrive/My Drive/Research/Research_2019/drone_dat_200.RData")
 #load("/Volumes/GoogleDrive/My Drive/Research/Research_2019/ground_dat_200.RData")
-
 handcounts_not_live <- as.numeric(1-df$ggtCov)
 ground_not_live <- as.numeric(ground_dat_200$`%sand`)+as.numeric(ground_dat_200$`%dead veg`)
 

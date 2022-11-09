@@ -12,7 +12,7 @@ knitr::opts_knit$set(root.dir=normalizePath("../.."))
 
 ## Source Functions
 ```{r, echo = FALSE, results = "hide", message=FALSE, echo = FALSE}
-source("code/extract-features/library/setup.R")
+source("code/extract-features/library/index.R")
 ```
 
 ## Set up Cluster

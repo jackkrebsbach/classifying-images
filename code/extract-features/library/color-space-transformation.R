@@ -42,3 +42,21 @@ color_transform <- function(inpath, transform = "RGBtoHSV", doComp = TRUE) {
   return(out_path)
 }
 
+
+color_transforms_function <- function(inpaths, transforms, doComp = FALSE, overWrite = FALSE){
+  
+  doCompVector <- rep(doComp, length(inpaths))
+  
+  if(!overWrite & doComp){
+    doCompVector <- list(inpaths, transforms) %>% 
+      pmap(.f = getColorPath) %>% 
+      unlist() %>% 
+      file.exists() %>%
+      !.
+  } 
+  args <- list(inpaths, transforms, doCompVector)
+  args %>% 
+    pmap(.f = color_transform) %>% 
+    unlist() %>%
+    return()
+}

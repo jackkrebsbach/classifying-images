@@ -18,16 +18,16 @@ library(tidyverse)
 library(magick)
 library(imager)
 library(reticulate)
-
 #Python Environment and Script Sourcing
 Sys.setenv(RETICULATE_PYTHON = '/Users/krebsbach/pyenvs/reticulate/bin/python3')
-source_python("code/extracting_features/library/meanshift_segmentation.py")
-x
+source_python("code/extract-features/library/segment.py")
+source("code/extract-features/library/meanshift-segmentation.R")
+
 #Texture Calcuation
-source("code/extracting_features/library/glcm_texture.R")
+source("code/extract-features/library/glcm-texture.R")
 
 #Color Space Transformations
-source("code/extracting_features/library/color_space_transformation.R")
+source("code/extract-features/library/color-space-transformation.R")
 ```
 
 ## Plot RGB Image
