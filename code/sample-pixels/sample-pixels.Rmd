@@ -58,12 +58,11 @@ layer_paths <- layer_names %>%
 
 polygon_data <-
   readRDS("clean_data/polygons/polys_sf.rds") %>%
-  mutate(directory = as.integer(dir)) %>%
   mutate(key = paste0(directory, "_", poly_num)) %>%
-  select(-c(imagePath, dir))
+  dplyr::select(-c(imagePath))
 
 data <- layer_paths %>%
- nest_join(polygon_data)
+ nest_join(polygon_data, by = 'directory')
 ```
 
 
@@ -72,6 +71,7 @@ mutate(across(everything(), ~ replace_na(.x, 255)))
 Extract all the pixels, should take an hour for ~20-40 polygons per quadrat with ~50 features each
 
 ```{r}
+#Create a cluster to extract pixels faster
 cl <- new_cluster(7) %>%
   cluster_library("tidyverse") %>%
   cluster_library("stringr") %>%
@@ -84,9 +84,9 @@ tic()
 pixel_data <- data %>%
   group_by(layer_path) %>%
   partition(cl) %>%
-  summarise(
+    summarise(
     polygons = polygon_data,
-    pixels = list(extract_pixels(layer_path[[1]], polygon_data[[1]])),
+    pixels = list(extract_pixels(layer_path[[1]], polygon_data[[1]]$polys)),
     image_name = image_name,
     directory = directory
   ) %>%
@@ -95,6 +95,8 @@ pixel_data <- data %>%
   arrange(directory)
 toc()
 pixel_data
+# Save for future
+saveRDS(pixel_data, file = "clean_data/rdata/pixel_values/pixel-testing.rds")
 ```
 
 

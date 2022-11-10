@@ -29,18 +29,13 @@ Because the quadrats were physically labeled in roman numerals 34-83, the ground
 directories  accordingly named. These folders are sometimes refereed to as "directories". Due to this naming scheme one should be careful as there are 50 directories,
 1-50, but the quadrats are labeled 34-83.
 
-The function sample_polygons takes in a directory (1-50) and gets the json created from label me.
+The function sample_polygons takes in the json path and the directory (1-50) and gets the json created from label me.
 
 ```{r}
-sample_polygons <- function(directory) {
-  label_me_json_paths <-
-    sprintf("clean_data/quadrats/quadrat%02d/rgb.json", seq(34, 83, 1))
-  json <- label_me_json_paths[directory]
+sample_polygons <- function(json) {
   json %>%
     label_me_json_to_sf() %>% # Helper defined in library (code/lib/veggie_utils.R)
-    dplyr::mutate(quadrat = directory + 33,
-                  dir = directory,
-                  area = st_area(.$polys)) %>%
+    dplyr::mutate(area = st_area(.$polys)) %>%
     dplyr::mutate(label = case_when(label == "live Marram grass" ~ "live vegetation", TRUE ~ label)) %>%
     filter(is.element(label, c(
       "live vegetation", "dead vegetation", "sand"
@@ -52,11 +47,18 @@ sample_polygons <- function(directory) {
 # Sample polygons and save for later use
 
 ```{r}
-polys_sf <- seq(1, 50) %>%
-  map(sample_polygons) %>%
-  bind_rows()
+label_me_json_paths <-
+  tibble(
+    label_me_json_path = sprintf("clean_data/quadrats/quadrat%02d/rgb.json", seq(34, 83, 1)),
+    directory = seq(1, 50)
+  )
 
-(polys_sf %>% st_make_valid() %>% count(label) -> label_counts)
+polys_sf <- label_me_json_paths %>%
+  rowwise %>%
+  mutate(polygons = list(sample_polygons(label_me_json_path))) %>%
+  ungroup %>%
+  unnest(cols = c(polygons))
+  
 #Save file in clean_data directory for future usage
 saveRDS(polys_sf, file = "clean_data/polygons/polys_sf.rds")
 ```
