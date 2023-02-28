@@ -13,6 +13,18 @@ getFileName <- function(filepath) {
     str_split("/") %>% .[[1]] %>% tail(n = 1)
 }
 
+
+
+getColorSpace <- function(out_path) {
+out_path %>% 
+    str_split("/") %>%
+    .[[1]] %>%
+    tail(1) %>%
+    str_split("[.]") %>%
+    .[[1]] %>%
+    head(1)
+}
+
 getColorPath <- function(inpath, transform) {
   # get the out file
   out_dir <- inpath %>% getFileDirectory()

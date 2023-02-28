@@ -19,10 +19,11 @@ source("code/extract-features/library/index.R")
 ```{r}
 cl <- new_cluster(6) %>%
   cluster_library("tidyverse") %>%
+  cluster_library("terra") %>%
   cluster_library("stringr") %>%
   cluster_library("glcm") %>%
   cluster_library("imager") %>%
-  cluster_library("raster")%>%
+  cluster_library("raster") %>%
   cluster_library("reticulate") %>%
   cluster_copy("color_transform") %>%
   cluster_copy("calculate_texture") %>%
@@ -32,28 +33,29 @@ cl <- new_cluster(6) %>%
   cluster_copy("getSegmentPath") %>%
   cluster_copy("getTexturePath") %>%
   cluster_copy("color_transforms_function") %>%
-  cluster_copy("texture_calculations_function")
-#  cluster_copy("segment") %>%
-#%>%
-  #cluster_copy("image_segmentation_function")
+  cluster_copy("texture_calculations_function") %>%
+  cluster_copy("segment") %>%
+  cluster_copy("image_segmentation_function")
 ```
 
+
 ## Color Space Transformations
+
 ```{r}
 file_paths <- 
-  tibble(inpath= sprintf("clean_data/quadrats/quadrat%02d/rgb.tif", seq(34, 83, 1))) 
+  tibble(inpath= sprintf("clean_data/quadrats/quadrat%02d/rgb.tif", seq(34, 34, 1))) 
 
 #Color Transform Parameters
-color_transforms <- tibble(transform = c("RGBtoHSV"))
+color_transforms <- tibble(transform = c("RGBtoLab", "RGBtoYUV","RGBtoHSL"))
 color_parameters <- file_paths %>% 
   full_join(color_transforms, by = character())
 
 color_out <- color_parameters %>%
   mutate(inpath_exists = file.exists(inpath)) %>%
-  partition(cl) %>%
-  mutate(outpath = color_transforms_function(inpath, transform, doComp = FALSE, overWrite = FALSE)) %>%
-  mutate(outpath_exists = file.exists(outpath)) %>%
-  collect()
+  rowwise() %>%
+  mutate(outpath = color_transforms_function(inpath, transform, doComp = TRUE, overWrite = FALSE)) %>%
+  ungroup() %>%
+  mutate(outpath_exists = file.exists(outpath))
 color_out
 ```
 
@@ -66,8 +68,8 @@ texture_stats <- tibble(statistic = c("contrast"))
 
 #Perform Texture Calculations
 texture_parameters <- color_out %>%
-  dplyr::select(outpath) %>%
-  rename(inpath = outpath) %>%
+ dplyr::select(outpath) %>%
+ rename(inpath = outpath) %>%
   dplyr::select(inpath) %>%
   full_join(texture_windows, by = character()) %>% 
   full_join(texture_stats, by = character()) %>%
@@ -89,22 +91,40 @@ segment_spatial <- tibble(spatial_radius = c(3, 6))
 segment_range <-tibble(range_radius = c(4.5, 7.5))
 segment_denisty <-tibble(min_density = c(30, 50, 70))
 
-segment_parameters <- color_out %>%
-  filter(transform == "RGBtoHSV" | transform == "RGBtoLab") %>%
-  dplyr::select(outpath) %>%
-  rename(inpath = outpath) %>%
+# segment_parameters <- color_out %>%
+#   filter(transform == "RGBtoHSV" | transform == "RGBtoLab") %>%
+#   dplyr::select(outpath) %>%
+#   rename(inpath = outpath) %>%
+
+segment_parameters <- dplyr::tibble(inpath = file_paths[[1]]) %>%
   full_join(segment_spatial, by = character()) %>% 
   full_join(segment_range, by = character()) %>%
   full_join(segment_denisty, by = character())
 
 segment_out <- segment_parameters %>%
   mutate(inpath_exists = file.exists(inpath)) %>%
-  partition(cl) %>%
+  #partition(cl) %>%
   mutate(outpath = image_segmentation_function(inpath, spatial_radius,
                                                range_radius, min_density,
                                                doComp = FALSE, overWrite = FALSE)) %>%
-  mutate(outpath_exists = file.exists(outpath)) %>%
-  collect()
+  mutate(outpath_exists = file.exists(outpath))# %>%
+ # collect()
 segment_out 
 ```
 
+```{r}
+rgb <- terra::rast("./clean_data/quadrats/quadrat34/rgb.tif")
+hsv <- terra::rast("./clean_data/quadrats/quadrat34/hsv.tif")
+
+hsv <- terra::rast("./clean_data/quadrats/quadrat34/hsv.tif") %>%
+  `names<-`(c("hsv_1", "hsv_2", "hsv_3"))
+
+
+lab <- terra::rast("./clean_data/quadrats/quadrat34/lab.tif")
+lab
+
+yuv_segmented <- raster::brick("./clean_data/quadrats_old/quadrat34/yuv_seg_3_4.5_15.tif")
+texture <- raster::brick("./clean_data/quadrats_old/quadrat34/hsv_contrast_L2_W7.tif")
+
+yuv
+```

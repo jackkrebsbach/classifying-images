@@ -1,4 +1,5 @@
 library(raster)
+library(terra)
 library(tidyverse)
 library(magick)
 library(imager)
@@ -12,33 +13,47 @@ color_transform <- function(inpath, transform = "RGBtoHSV", doComp = TRUE) {
   
   #Get Path to Write
   out_path <- getColorPath(inpath, transform)
+  print(out_path)
+  color_space <- getColorSpace(out_path)
   if(!file.exists(inpath)){ doComp <- FALSE; message(paste0(inpath, " does not exist")) }
   
   if (doComp) {
     # read in image with imager
     #Cant get working with imager so trying magick
+    
     image <- inpath %>%
       magick::image_read() %>%
       imager::magick2cimg()
-    #image <- inpath %>% imager::load.image()
+    
     # get transform from environment
     clr_transform <- transform %>%
       get()
     
     # do transform
-    image %>%
+    rast <- image %>%
       clr_transform() %>%
       drop() %>%
       as.array() %>%
-      brick() %>%
-      t() %>%
-      stretch() %>%
-      writeRaster(
-        filename = out_path, datatype = "INT1U",
-        format = "GTiff", na.rm = TRUE, overwrite = TRUE
-      )
+      terra::rast() %>%
+      terra::t() %>%
+      terra::stretch()
+    
+    names(rast) <- paste0(color_space, "_", seq(terra::nlyr(rast)))
+    
+    rast[is.na(rast)] <- 254
+    rast[is.nan(rast)] <- 254
+    rast[rast == 255] <- 254
+    NAflag(rast) <- 255
+    
+    terra::writeRaster(
+      x = rast,
+      filename = out_path,
+      datatype = "INT1U",
+      overwrite = TRUE
+    )
+    
+    rm(rast)
   }
-
   # return the written file path
   return(out_path)
 }

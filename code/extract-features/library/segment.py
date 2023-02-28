@@ -10,8 +10,8 @@ def segment(image_path, spatial_radius = 6 , range_radius = 4.5, min_density =  
         doComp = False
     
     out_path = ("/".join(image_path.split("/")[:-1]) + "/" + 
-                image_path.split("/")[-1].split(".")[0] +"_seg_" + 
-                str(int(spatial_radius)) + "_" + str(float(range_radius)) + "_" + 
+                image_path.split("/")[-1].split(".")[0] +"_seg_" + "SR" +
+                str(int(spatial_radius)) + "_RR" + str(float(range_radius)) + "_MD" + 
                 str(int(min_density)) + ".tif")
     
     if(len(image_path.split("/")) == 1):

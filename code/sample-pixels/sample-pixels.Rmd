@@ -13,7 +13,7 @@ knitr::opts_knit$set(root.dir=normalizePath("../.."))
 
 ## Load Libraries and functions
 
-```{r,echo = FALSE, results='hide', message=FALSE}
+```{r, message = FALSE, echo = FALSE, results='hide', message=FALSE}
 library(sf)
 library(raster)
 library(tidyverse)
@@ -21,6 +21,7 @@ library(jsonlite)
 library(tictoc)
 library(multidplyr)
 library(exactextractr)
+library(terra)
 source("code/sample-pixels/extract-pixels.R")
 source("code/lib/spatial-utils.R")
 source("code/lib/parse-file-path.R")
@@ -99,5 +100,30 @@ pixel_data
 saveRDS(pixel_data, file = "clean_data/rdata/pixel_values/pixel-testing.rds")
 ```
 
+#Testing
+```{r}
+extract_pixels <- function(x, raster){
+  raster %>% 
+    crop(x %>% vect(), mask = TRUE) %>% 
+    as_tibble() %>%
+    return()
+}
 
+stars_pol_to_df <- function(x, lc_stars){
+  lc_stars[x] %>% 
+    st_as_sf(as.points=TRUE) %>% 
+    st_drop_geometry() %>% 
+    as_tibble() %>%
+    return()
+}
 
+rgb <- terra::rast("clean_data/quadrats/quadrat34/rgb.tif")
+polygon <- polys_sf$polys
+NAflag(rgb) <- 999
+
+pixels <- extract_pixels(polygon, rgb)
+max(pixels)
+any(pixels$rgb_1 == 255)
+
+rgb <- paste0("clean_data/quadrats/quadrat34/rgb.tif") %>% read_stars(NA_value = 999)
+```
