@@ -49,7 +49,7 @@ sample_polygons <- function(json) {
 ```{r}
 label_me_json_paths <-
   tibble(
-    label_me_json_path = sprintf("clean_data/quadrats/quadrat%02d/rgb.json", seq(34, 83, 1)),
+    label_me_json_path = sprintf("clean_data/quadrats_old/quadrat%02d/rgb.json", seq(34, 83, 1)),
     directory = seq(1, 50)
   )
 
@@ -60,6 +60,6 @@ polys_sf <- label_me_json_paths %>%
   unnest(cols = c(polygons))
   
 #Save file in clean_data directory for future usage
-saveRDS(polys_sf, file = "clean_data/polygons/polys_sf.rds")
+#saveRDS(polys_sf, file = "clean_data/polygons/polys_sf.rds")
 ```
 

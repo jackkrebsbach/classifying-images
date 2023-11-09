@@ -1,0 +1,66 @@
+---
+title: "ortho_statistics"
+author: "Jack Krebsbach"
+date: "11/9/2023"
+output: html_document
+---
+
+## Set up
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Load Libraries
+```{r}
+library(raster)
+library(tidyverse)
+```
+
+## Load the mastk
+```{r}
+## Use relative paths
+file_path <- "../clean_data/drone_sitched/Mask.shp"
+shape <- shapefile(file_path)
+shape
+```
+
+## Read in Ortho
+```{r}
+ortho_path <- "../clean_data/drone_sitched/vegdensity1.tif"
+ortho <- raster::raster(ortho_path)
+```
+
+## Plot ortho
+```{r}
+plot(ortho)
+plot(shape, add=TRUE, col=rainbow(length(unique(shape$attribute))))
+```
+
+## Crop and mask ortho
+
+```{r}
+#ortho[ortho == 0] <- NA
+masked <- mask(ortho, shape, inverse =TRUE)
+```
+
+```{r}
+plot(masked)
+```
+
+## Calculate Statistics
+
+```{r}
+customStat <- function(x,...) {
+  c(mean = mean(x, na.rm = TRUE), 
+    sd = sd(x, na.rm = TRUE), 
+    min = min(x, na.rm = TRUE), 
+    max = max(x, na.rm = TRUE), 
+    sum = sum(x, na.rm = TRUE))
+}
+  
+stats <- raster::cellStats(masked,stat=customStat, na.rm=na.rm) 
+formattedStats <- format(stats, scientific = FALSE, digits = 4)
+print(formattedStats)
+```
+

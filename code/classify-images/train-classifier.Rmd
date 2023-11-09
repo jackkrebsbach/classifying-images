@@ -61,8 +61,7 @@ clean_pixels <- pixels %>%
   )) %>%
   dplyr::select(-class_to_change_to)
 
-saveRDS(clean_pixels,
-        'clean_data/rdata/pixel_values/clean_pixels.rds')
+#saveRDS(clean_pixels,    'clean_data/rdata/pixel_values/clean_pixels.rds')
 ```
 
 ## Train test split

@@ -43,7 +43,7 @@ quadrat_paths <-
   ) 
 
 layers <-
-  list.files("clean_data/quadrats/quadrat35/", pattern = '.tif') %>%
+  list.files("clean_data/quadrats_old/quadrat35/", pattern = '.tif') %>%
   str_split(pattern = '.tif', n = 1) %>%
   unlist()
 
@@ -126,4 +126,31 @@ max(pixels)
 any(pixels$rgb_1 == 255)
 
 rgb <- paste0("clean_data/quadrats/quadrat34/rgb.tif") %>% read_stars(NA_value = 999)
+```
+
+
+```{r}
+library(xgboost)
+data(iris)
+lb <- as.numeric(iris$Species) - 1
+num_class <- 3
+set.seed(11)
+N = 120
+bst <- xgboost(data = as.matrix(iris[1:N, -5]), label = lb[1:N],
+               max_depth = 100, eta = 0.5, nthread = 2, nrounds = 2, 
+               subsample = 0.15, objective = "multi:softprob",
+               num_class = num_class, verbose = FALSE, )  
+
+
+raw <- predict(bst, as.matrix(iris[N, -5]), outputmargin = TRUE) # Raw scores
+raw
+
+prob <- predict(bst, as.matrix(iris[N, -5]), outputmargin = FALSE) # Probabilities
+prob
+
+manual_sm <- function(rs)  exp(rs - log(sum(exp(rs)))) # Manual LogSumExp
+
+manual_sm(raw)
+xgb.plot.tree(model = bst)
+lb
 ```
